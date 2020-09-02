@@ -158,7 +158,7 @@
 
   async function skipItem() {
     setEl('skipBtn', '<span class="loading"></span>')
-    const res = await fetch(`${getURL()}/skip?guildId=${getChannel()}`)
+    const res = await fetch(`${getURL()}/skip?guildId=${getGuild()}`)
     setEl('skipBtn', '&#9654; SKIP')
     console.log(res)
     getQueue()
