@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Switchblade music system ™️</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+</head>
+
+<body>
+<div class="content">
+    <div>
+        <div class="title">
+            <h1><b id="woopsie"></b> SWITCHBLADE MUSIC QUEUE SYSTEM™️</h1>
+            <b>Queue for server <span id="serverId"></span> <span id="spLoading"></span></b>
+        </div>
+        <div class="np">
+            <h5 id="npTitle">> NOW PLAYING &#60;</h5>
+            <h1 id="npName">CARREGANDO PERAI</h1>
+            <h3 id="npArtist">...</h3>
+            <button id="skipBtn" onclick="skipItem()">&#9654; SKIP</button>
+        </div>
+
+        <div class="volumeBox" id="volumeBox">
+            <h5 id="volumeText">> VOLUME</h5>
+            <input type="range" id="volume" max="150" oninput="volumeUpdate()" onchange="changeVolume()" />
+        </div>
+
+        <div class="queue addItem">
+            <h5 id="npAddItem">> ADD SONG</h5>
+            <input class="textInput" type="text" id="song"/>
+            <button id="addBtn" onclick="addItemToQueue()">ADD SONG TO QUEUE</button>
+        </div>
+        <div class="queue">
+            <h5 id="npTitle">QUEUE (<span id="queueSize">0</span> songs)</h5>
+            <div id="queueItems"></div>
+        </div>
+        <br/>
+    </div>
+    <div class="rightSide">
+        <button onclick="config()">CONFIG</button>
+    </div>
+</div>
+<div class="configBox">
+    <span class="configLabel">Music server</span>
+    <input onchange="save()" type="text" class="textInput" id="url"/>
+    <span class="configLabel">Guild id</span>
+    <input onchange="save()" type="text" class="textInput" id="guild"/>
+    <span class="configLabel">Channel id</span>
+    <input onchange="save()" type="text" class="textInput" id="channel"/>
+</div>
+<span class="loading" style="color: white;"></span>
+</body>
+
+<script>
+  const getURL = () => localStorage.getItem('url');
+  const getGuild = () => localStorage.getItem('guild');
+  const getChannel = () => localStorage.getItem('channel');
+
+  function save () {
+    const guild = document.getElementById('guild').value
+    const url = document.getElementById('url').value
+    const channel = document.getElementById('channel').value
+
+    localStorage.setItem('url', url)
+    localStorage.setItem('guild', guild)
+    localStorage.setItem('channel', channel)
+  }
+
+  function volumeUpdate() {
+    const { value } = document.getElementById('volume')
+    if (value > 100) {
+      document.getElementById('volumeBox').classList.add('warning')
+    } else {
+      document.getElementById('volumeBox').classList.remove('warning')
+    }
+  }
+
+  async function changeVolume() {
+    const { value } = document.getElementById('volume')
+
+    document.getElementById('volume').disabled = true
+    await fetch(`${getURL()}/volume?guildId=${getGuild()}&volume=${value}`).then(r => r.json())
+    document.getElementById('volume').disabled = false
+  }
+
+  (function () {
+    document.getElementById('serverId').innerHTML = getGuild()
+
+    document.getElementById('guild').value = getGuild()
+    document.getElementById('url').value = getURL()
+    document.getElementById('channel').value = getChannel()
+
+
+    getQueue()
+
+
+
+
+    let i = true;
+    setInterval(() => {
+      if (i) {
+        setEl('npTitle', '> NOW PLAYING &#60;')
+        setEl('volumeText', '> VOLUME')
+        setEl('npAddItem', '> ADD SONG')
+      } else {
+        setEl('npTitle', '  NOW PLAYING  ')
+        setEl('volumeText', '  VOLUME')
+        setEl('npAddItem', '  ADD SONG')
+      }
+      i = !i
+    }, 500)
+
+    let l = 0;
+    setInterval(() => {
+      const spinners = '|/-\\'.split('')
+      if (l === 4) l = 0;
+
+      document.getElementsByClassName('loading')[0].innerHTML = spinners[l]
+      l++
+    }, 100)
+
+    setInterval(() => {
+      getQueue()
+    }, 100000)
+  })()
+
+  const config = () => {
+
+    // const url = prompt('Music server URL')
+    // localStorage.setItem('url', url)
+  }
+
+  async function getQueue() {
+    setEl('spLoading', ' - Loading...')
+    const res = await fetch(`${getURL()}/queue?guildId=${getGuild()}`).then(r => r.json())
+    console.log(res)
+    if (!res.playing) {
+      const uwus = ['ヽ(*。>Д<)o', '（︶^︶）', '(* ￣︿￣)～', '(　TロT)σ', '(〃＞目＜)', 'ヽ(゜▽゜　)－', '<(/;◇;)/', '~(￣﹏￣；)', '{{{(>_<)}}}', '::>_<::', '(；′⌒`)', '≧ ﹏ ≦', '┗( T﹏T )┛', 'ಥ_ಥ', '(。﹏。*)']
+      setEl('npName', `Playing nothing ${uwus[Math.floor(Math.random() * uwus.length)]}`)
+    }
+    setEl('npName', res.playing.title)
+    setEl('npArtist', res.playing.author)
+    setEl('queueSize', res.queue.length)
+    setEl('spLoading', '')
+    setEl('queueItems', '')
+
+    res.queue.forEach((info, index) => {
+      document.getElementById('queueItems').innerHTML += `
+      <div class="item">
+        <h3 style="margin-bottom: 0px;">#${index + 1} - ${info.title}</h3>
+        <h4 style="margin-top: 3px;">     ${info.author}</h4>
+      </div>
+      `
+    });
+  }
+
+  async function skipItem() {
+    setEl('skipBtn', '<span class="loading"></span>')
+    const res = await fetch(`${getURL()}/skip?guildId=${getChannel()}`)
+    setEl('skipBtn', '&#9654; SKIP')
+    console.log(res)
+    getQueue()
+  }
+
+  function setEl(id, content) {
+    document.getElementById(id).innerHTML = content
+  }
+
+  async function addItemToQueue() {
+    const identifier = encodeURIComponent(`ytsearch:${document.getElementById('song').value}`)
+    setEl('addBtn', '<span class="loading"></span>')
+    const res = await fetch(`${getURL()}/search?identifier=${identifier}&playFirstResult=true&guildId=${getGuild()}&channelId=${getChannel()}`)
+    setEl('addBtn', 'ADD SONG TO QUEUE')
+    console.log(res)
+    getQueue()
+  }
+</script>
+
+<style>
+    body {
+        font-family: monospace;
+    }
+
+    .rightSide {
+        /*display: flex;*/
+        /*justify-content: flex-end;*/
+    }
+
+    .content {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    #volume {
+        width: 200px;
+    }
+
+    .np {
+        margin-left: 30px;
+    }
+
+    .textInput {
+        font-family: monospace;
+        padding: 5px;
+        width: 299px;
+        border: 1px solid black;
+    }
+
+    .textInput:focus {
+        outline: none;
+    }
+
+    .configBox > input{
+        width: 150px;
+        margin-bottom: 4px;
+    }
+
+    .configBox > span{
+        font-size: 10px;
+    }
+
+    button {
+        font-family: monospace;
+        padding: 5px 10px;
+        /*width: 146px;*/
+        border: 1px solid black;
+        background: black;
+        color: white;
+
+    }
+
+    .configBox {
+        position: absolute;
+        right: 10px;
+        top: 50px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #skipBtn {
+        font-family: monospace;
+        padding: 5px;
+        width: 89px;
+        border: 1px solid black;
+        background: black;
+        margin-top: 20px;
+        color: white;
+    }
+
+    #addBtn:focus {
+        outline: none;
+    }
+
+    #npTitle, #npAddItem, #volumeText {
+        white-space: pre
+    }
+
+
+    .queue, .volumeBox {
+        margin-left: 30px;
+        margin-top: 60px;
+    }
+
+    .np h5,
+    .np h3 {
+        margin-bottom: 0px;
+        margin-top: 0px;
+    }
+
+    #npName {
+
+        margin-bottom: 1px;
+        font-weight: bolder;
+    }
+
+    .title {
+        padding: 30px;
+    }
+
+
+
+  .warning {
+      background: red;
+  }
+
+</style>
+
+</html>
